@@ -26,13 +26,26 @@ jobs:
         run: |
           git clone --depth 1 -b oneplus/sm8350_u_14.0.0_oneplus9 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8350.git kernel_source
 
+      - name: Prepare Kernel (modules_prepare)
+        env:
+          KERNEL_DIR: ${{ github.workspace }}/kernel_source
+          NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+          cd $KERNEL_DIR
+          # نسخ ملف الإعدادات المرفق إلى مسار إعدادات معمارية ARM64
+          cp ${{ github.workspace }}/ossi_oos14_defconfig.txt arch/arm64/configs/custom_defconfig
+          # تهيئة النواة
+          make ARCH=arm64 CC=clang custom_defconfig
+          make ARCH=arm64 CC=clang modules_prepare
+
       - name: Build KPM
         env:
-          NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
-          KP_DIR: ${{ github.workspace }}/KernelPatch
           KERNEL_DIR: ${{ github.workspace }}/kernel_source
+          NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          make
+          export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+          make ARCH=arm64 CC=clang KERNEL_DIR=$KERNEL_DIR
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
