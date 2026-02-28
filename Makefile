@@ -1,19 +1,21 @@
 KPM_NAME := oplus_optimize
 
-# التحقق مما إذا كان الملف يتم تنفيذه داخل بيئة Kbuild
 ifneq ($(KERNELRELEASE),)
-    # هذه الكتلة ينفذها نظام النواة (Kbuild)
-    ccflags-y += -I$(KP_DIR)/kernel/patch/include
-    ccflags-y += -I$(KP_DIR)/kernel/linux/include
+    # استخدام $(src) لضمان دقة المسار داخل بيئة Kbuild
+    # استخدام EXTRA_CFLAGS كضمان إضافي ضد عمليات المسح الخاصة بـ OPLUS
+    EXTRA_CFLAGS += -I$(src)/KernelPatch/kernel/patch/include
+    EXTRA_CFLAGS += -I$(src)/KernelPatch/kernel/linux/include
+    ccflags-y += -I$(src)/KernelPatch/kernel/patch/include
+    ccflags-y += -I$(src)/KernelPatch/kernel/linux/include
+    
     obj-m += main.o
 
 else
-    # هذه الكتلة ينفذها مسار العمل (GitHub Actions)
     OUT_DIR := $(PWD)/out
 
 all:
-	# استدعاء نظام Kbuild وتمرير KP_DIR كمعامل إلزامي
-	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) KP_DIR=$(KP_DIR) ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 modules
+	# لم يعد هناك حاجة لتمرير KP_DIR كمتغير خارجي هنا
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 modules
 	mkdir -p $(OUT_DIR)
 	cp kpm.json $(OUT_DIR)/
 	cp main.ko $(OUT_DIR)/module.ko
