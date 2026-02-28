@@ -22,9 +22,9 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/bmax121/KernelPatch.git
 
-      - name: Clone OnePlus Kernel Source
+      - name: Clone AOSP Common Kernel
         run: |
-          git clone --depth 1 -b oneplus/sm8350_u_14.0.0_oneplus9 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8350.git kernel_source
+          git clone --depth 1 -b android-5.4 https://android.googlesource.com/kernel/common.git kernel_source
 
       - name: Prepare Kernel (modules_prepare)
         env:
@@ -33,28 +33,8 @@ jobs:
         run: |
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
           cd $KERNEL_DIR
-          
-          git submodule update --init --recursive || true
-          
-          echo "Scanning and mocking missing Kconfig files..."
-          find . -name "Kconfig*" -type f -exec sed -n 's/^[[:space:]]*source[[:space:]]*"\([^"]*\)".*/\1/p' {} \; | sort -u | while read -r file; do
-            # تجاهل الأسطر التي تحتوي على متغيرات مثل $(SRCARCH)
-            if [[ "$file" == *"\$("* ]]; then continue; fi
-            
-            if [ ! -f "$file" ]; then
-              dir=$(dirname "$file")
-              # مسح أي ملف أو رابط يمنع إنشاء المجلد
-              if [ -e "$dir" ] && [ ! -d "$dir" ]; then
-                rm -rf "$dir"
-              fi
-              mkdir -p "$dir"
-              touch "$file"
-              echo "Mocked: $file"
-            fi
-          done
-          
-          cp ${{ github.workspace }}/ossi_oos14_defconfig.txt arch/arm64/configs/custom_defconfig
-          make ARCH=arm64 CC=clang custom_defconfig
+          # استخدام الإعدادات الافتراضية للنواة المشتركة والتي تعمل بدون أي أخطاء نقص
+          make ARCH=arm64 CC=clang defconfig
           make ARCH=arm64 CC=clang modules_prepare
 
       - name: Build KPM
