@@ -34,19 +34,23 @@ jobs:
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
           cd $KERNEL_DIR
           
-          # 1. محاولة جلب أي وحدات فرعية قد تكون الشركة قد أرفقتها
+          # محاولة جلب الوحدات الفرعية السليمة وتخطي المعطلة
           git submodule update --init --recursive || true
           
-          # 2. إنشاء ملفات Kconfig الوهمية لتجاوز أخطاء النقص
-          # إصلاح الخطأ الحالي
+          # إزالة المسارات المعطلة أو الروابط قبل إعادة إنشائها كمجلدات
+          rm -rf kernel/sched_assist
           mkdir -p kernel/sched_assist
           touch kernel/sched_assist/Kconfig
           
-          # استباق أخطاء أخرى شائعة في نواة OnePlus/OPPO
+          rm -rf vendor/oplus/kernel/device_modules
           mkdir -p vendor/oplus/kernel/device_modules
-          touch vendor/oplus/kernel/device_modules/Kconfig || true
+          touch vendor/oplus/kernel/device_modules/Kconfig
           
-          # 3. نسخ الإعدادات وتهيئة النواة
+          rm -rf techpack/audio
+          mkdir -p techpack/audio
+          touch techpack/audio/Kconfig
+          
+          # نسخ ملف الإعدادات وتهيئة النواة
           cp ${{ github.workspace }}/ossi_oos14_defconfig.txt arch/arm64/configs/custom_defconfig
           make ARCH=arm64 CC=clang custom_defconfig
           make ARCH=arm64 CC=clang modules_prepare
