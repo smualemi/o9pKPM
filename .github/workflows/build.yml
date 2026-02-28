@@ -34,28 +34,28 @@ jobs:
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
           cd $KERNEL_DIR
           
-          # محاولة جلب الوحدات الفرعية السليمة
+          # جلب ما توفر من وحدات فرعية
           git submodule update --init --recursive || true
           
-          # مسح وإنشاء ملفات Kconfig الوهمية مع تجاهل المتغيرات النصية
           echo "Scanning and mocking missing Kconfig files..."
           find . -name "Kconfig*" -type f -exec sed -n 's/^[[:space:]]*source[[:space:]]*"\([^"]*\)".*/\1/p' {} \; | sort -u | while read -r file; do
-            # تجاهل الأسطر التي تحتوي على علامة $ (مثل $SRCARCH) لتفادي أخطاء النظام
+            # تجاهل المتغيرات النصية
             if [[ "$file" == *"\$"* ]]; then continue; fi
             
             if [ ! -f "$file" ]; then
               dir=$(dirname "$file")
-              # مسح أي ارتباطات معطلة تمنع إنشاء المجلد
-              if [ -e "$dir" ] && [ ! -d "$dir" ]; then
-                rm -rf "$dir"
+              # إذا كان المسار موجودًا ولكنه ليس مجلدًا (ملف أو رابط معطل)، قم بحذفه إجبارياً
+              if [ ! -d "$dir" ]; then
+                rm -f "$dir" 2>/dev/null || true
               fi
-              mkdir -p "$dir"
-              touch "$file"
+              # إنشاء المجلد والملف مع تخطي الأخطاء إن وجدت لضمان استمرار العملية
+              mkdir -p "$dir" 2>/dev/null || continue
+              touch "$file" 2>/dev/null || true
               echo "Mocked: $file"
             fi
           done
           
-          # نسخ ملف الإعدادات وتهيئة النواة
+          # نسخ الإعدادات وتهيئة النواة
           cp ${{ github.workspace }}/ossi_oos14_defconfig.txt arch/arm64/configs/custom_defconfig
           make ARCH=arm64 CC=clang custom_defconfig
           make ARCH=arm64 CC=clang modules_prepare
