@@ -1,25 +1,17 @@
+obj-m += main.o
 KPM_NAME := oplus_optimize
-OUT_DIR := out
+OUT_DIR := $(PWD)/out
 
-CC := $(NDK_PATH)/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android30-clang
-
-# تحديد مسارات الترويسات الخاصة بـ KernelPatch
-INCLUDE_FLAGS := -I$(KP_DIR)/kernel/patch/include \
-                 -I$(KP_DIR)/kernel/linux/include \
-                 -I$(KP_DIR)/kernel/linux/arch/arm64/include \
-                 -I$(KP_DIR)/kernel/linux/tools/arch/arm64/include
-
-# إعدادات الترجمة
-CFLAGS := -target aarch64-linux-android -fPIC -ffreestanding -O2 -Wall $(INCLUDE_FLAGS)
-
-all: build_kpm
-
-build_kpm: main.c kpm.json
+all:
+	# استدعاء نظام Kbuild للنواة
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) ARCH=arm64 CC=clang modules
 	mkdir -p $(OUT_DIR)
-	$(CC) $(CFLAGS) -c main.c -o $(OUT_DIR)/main.o
 	cp kpm.json $(OUT_DIR)/
-	cd $(OUT_DIR) && zip -r $(KPM_NAME).kpm main.o kpm.json
-	cp $(OUT_DIR)/$(KPM_NAME).kpm ./
+	cp main.ko $(OUT_DIR)/
+	# حزم الملفات في صيغة KPM
+	cd $(OUT_DIR) && zip -r $(KPM_NAME).kpm main.ko kpm.json
+	cp $(OUT_DIR)/$(KPM_NAME).kpm $(PWD)/
 
 clean:
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) clean
 	rm -rf $(OUT_DIR) *.kpm
