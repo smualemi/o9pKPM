@@ -26,6 +26,10 @@ jobs:
         run: |
           git clone --depth 1 -b oneplus/sm8350_u_14.0.0_oneplus9 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8350.git kernel_source
 
+      - name: Prepare KPM Headers
+        run: |
+          find KernelPatch -name "kp_api.h" -exec cp {} ${{ github.workspace }}/ \;
+
       - name: Build KPM
         env:
           NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
