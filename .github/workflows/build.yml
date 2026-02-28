@@ -18,10 +18,6 @@ jobs:
         with:
           ndk-version: r25c
 
-      - name: Clone KernelPatch
-        run: |
-          git clone --depth 1 https://github.com/bmax121/KernelPatch.git
-
       - name: Clone OnePlus Kernel Source
         run: |
           git clone --depth 1 -b oneplus/sm8350_u_14.0.0_oneplus9 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8350.git kernel_source
@@ -60,14 +56,19 @@ jobs:
           make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 custom_defconfig
           make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 modules_prepare
 
+      - name: Clone KernelPatch
+        run: |
+          git clone --depth 1 https://github.com/bmax121/KernelPatch.git
+
       - name: Build KPM
         env:
           KERNEL_DIR: ${{ github.workspace }}/kernel_source
           NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
+          KP_DIR: ${{ github.workspace }}/KernelPatch
         run: |
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-          make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR
-
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR KP_DIR=$KP_DIR
+          
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
