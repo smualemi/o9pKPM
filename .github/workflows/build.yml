@@ -34,23 +34,23 @@ jobs:
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
           cd $KERNEL_DIR
           
-          # محاولة جلب الوحدات الفرعية السليمة وتخطي المعطلة
+          # جلب ما توفر من وحدات فرعية
           git submodule update --init --recursive || true
           
-          # إزالة المسارات المعطلة أو الروابط قبل إعادة إنشائها كمجلدات
-          rm -rf kernel/sched_assist
-          mkdir -p kernel/sched_assist
-          touch kernel/sched_assist/Kconfig
+          # مسح شامل لجميع ملفات Kconfig لاستخراج المسارات المفقودة وإنشائها تلقائياً
+          echo "Scanning and mocking missing Kconfig files..."
+          find . -name "Kconfig*" -type f -exec sed -n 's/^[[:space:]]*source[[:space:]]*"\([^"]*\)".*/\1/p' {} \; | sort -u | while read -r file; do
+            if [ ! -f "$file" ]; then
+              # إزالة أي ارتباطات معطلة في المسار
+              rm -rf "$file"
+              # إنشاء المجلد والملف الوهمي
+              mkdir -p "$(dirname "$file")"
+              touch "$file"
+              echo "Mocked: $file"
+            fi
+          done
           
-          rm -rf vendor/oplus/kernel/device_modules
-          mkdir -p vendor/oplus/kernel/device_modules
-          touch vendor/oplus/kernel/device_modules/Kconfig
-          
-          rm -rf techpack/audio
-          mkdir -p techpack/audio
-          touch techpack/audio/Kconfig
-          
-          # نسخ ملف الإعدادات وتهيئة النواة
+          # نسخ الإعدادات وتهيئة النواة
           cp ${{ github.workspace }}/ossi_oos14_defconfig.txt arch/arm64/configs/custom_defconfig
           make ARCH=arm64 CC=clang custom_defconfig
           make ARCH=arm64 CC=clang modules_prepare
