@@ -6,7 +6,7 @@ CC := $(NDK_PATH)/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-androi
 
 # إعدادات الترجمة: معمارية ARM64، وتضمين مسارات ترويسات KernelPatch والنواة
 CFLAGS := -target aarch64-linux-android -fPIC -ffreestanding -O2 -Wall \
-          -I$(KP_DIR)/include \
+          -I. \
           -I$(KERNEL_DIR)/include \
           -I$(KERNEL_DIR)/arch/arm64/include
 
