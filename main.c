@@ -1,19 +1,21 @@
-#include <linux/module.h>
-#include <linux/kernel.h>
 #include <linux/printk.h>
+#include <kpmodule.h> // سيتم توفير هذا المسار عبر Makefile
 
-static int __init oplus_kpm_init(void) {
+KPM_NAME("oplus_optimize");
+KPM_VERSION("1.0.0");
+KPM_LICENSE("GPL v2");
+KPM_AUTHOR("Dev");
+KPM_DESCRIPTION("OnePlus 9 Optimizer KPM");
+
+static long oplus_kpm_init(const char *args, const char *event, void *__user reserved) {
     pr_info("OnePlus 9 Optimizer KPM Loaded Successfully!\n");
     return 0;
 }
 
-static void __exit oplus_kpm_exit(void) {
+static long oplus_kpm_exit(void *__user reserved) {
     pr_info("OnePlus 9 Optimizer KPM Unloaded!\n");
+    return 0;
 }
 
-module_init(oplus_kpm_init);
-module_exit(oplus_kpm_exit);
-
-MODULE_LICENSE("GPL v2");
-MODULE_AUTHOR("Dev");
-MODULE_DESCRIPTION("OnePlus 9 Optimizer KPM");
+KPM_INIT(oplus_kpm_init);
+KPM_EXIT(oplus_kpm_exit);
