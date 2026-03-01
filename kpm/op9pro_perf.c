@@ -25,9 +25,12 @@ KPM_DESCRIPTION("OnePlus 9 Pro Performance Optimizer");
 #define PROF_BAT   2
 static int cur_profile = PROF_BAL;
 
-/* Kernel file ops via kfunc */
-static void kfunc_def(filp_open)(const char *, int, unsigned short);
-static int kfunc_def(kernel_write)(void *, const void *, unsigned long, long long *);
+/* Kernel file ops - kfunc declarations
+ * kfunc_def(func) expands to (*kf_func)
+ * So: void *kfunc_def(filp_open)(...) => void *(*kf_filp_open)(...)
+ */
+static void *kfunc_def(filp_open)(const char *, int, unsigned short);
+static long kfunc_def(kernel_write)(void *, const void *, unsigned long, long long *);
 static int kfunc_def(filp_close)(void *, void *);
 static int funcs_ok = 0;
 
@@ -255,7 +258,7 @@ static void apply(int p)
     cur_profile = p;
 }
 
-/* === KPM init === */
+/* === KPM callbacks === */
 static long kpm_init(const char *args, const char *event, void *__user reserved)
 {
     pr_info("op9pro-perf v1.0.0 init, kpver: %x\n", kpver);
@@ -272,7 +275,6 @@ static long kpm_init(const char *args, const char *event, void *__user reserved)
     return 0;
 }
 
-/* === KPM control === */
 static long kpm_ctl0(const char *args, char *__user out_msg, int outlen)
 {
     pr_info("op9pro-perf: ctl args=%s\n", args ? args : "null");
@@ -293,7 +295,6 @@ static long kpm_ctl0(const char *args, char *__user out_msg, int outlen)
 
 static long kpm_ctl1(void *a1, void *a2, void *a3) { return 0; }
 
-/* === KPM exit === */
 static long kpm_exit(void *__user reserved)
 {
     pr_info("op9pro-perf: exit, restoring balanced\n");
