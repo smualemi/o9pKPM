@@ -1,4 +1,4 @@
-#include "kpmodule.h"
+#include <linux/kpmodule.h>
 #include <linux/printk.h>
 
 KPM_NAME("oplus_optimize");
