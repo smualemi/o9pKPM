@@ -18,77 +18,18 @@ jobs:
         with:
           ndk-version: r25c
 
-      - name: Clone OnePlus Kernel Source
-        run: |
-          git clone --depth 1 -b oneplus/sm8350_u_14.0.0_oneplus9 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8350.git kernel_source
-
-      - name: Prepare Kernel (modules_prepare)
-        env:
-          KERNEL_DIR: ${{ github.workspace }}/kernel_source
-          NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-          cd $KERNEL_DIR
-          
-          # جلب ما توفر من وحدات فرعية
-          git submodule update --init --recursive || true
-          
-          echo "Scanning and mocking missing Kconfig files..."
-          find . -name "Kconfig*" -type f -exec sed -n 's/^[[:space:]]*source[[:space:]]*"\([^"]*\)".*/\1/p' {} \; | sort -u | while read -r file; do
-            # تجاهل المتغيرات النصية
-            if [[ "$file" == *"\$"* ]]; then continue; fi
-            
-            if [ ! -f "$file" ]; then
-              dir=$(dirname "$file")
-              # إذا كان المسار موجودًا ولكنه ليس مجلدًا (ملف أو رابط معطل)، قم بحذفه إجبارياً
-              if [ ! -d "$dir" ]; then
-                rm -f "$dir" 2>/dev/null || true
-              fi
-              # إنشاء المجلد والملف مع تخطي الأخطاء إن وجدت لضمان استمرار العملية
-              mkdir -p "$dir" 2>/dev/null || continue
-              touch "$file" 2>/dev/null || true
-              echo "Mocked: $file"
-            fi
-          done
-          
-          # نسخ الإعدادات وتهيئة النواة
-          cp ${{ github.workspace }}/ossi_oos14_defconfig.txt arch/arm64/configs/custom_defconfig
-          make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 custom_defconfig
-          make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 modules_prepare
-
       - name: Clone KernelPatch
         run: |
           git clone --depth 1 https://github.com/bmax121/KernelPatch.git
 
       - name: Build KPM
         env:
-          KERNEL_DIR: ${{ github.workspace }}/kernel_source
           NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
           KP_DIR: ${{ github.workspace }}/KernelPatch
         run: |
-          export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-          
-          # 1. البحث الديناميكي عن ملف kpmodule.h داخل مستودع KernelPatch
-          KP_HEADER=$(find $KP_DIR -name "kpmodule.h" | head -n 1)
-          
-          # التحقق من العثور على الملف
-          if [ -z "$KP_HEADER" ]; then
-            echo "Error: kpmodule.h not found in KernelPatch repository!"
-            exit 1
-          fi
-          
-          echo "Found kpmodule.h at: $KP_HEADER"
-          
-          # 2. نسخ الملف إلى المجلد المحمي داخل النواة الأصلية
-          cp "$KP_HEADER" $KERNEL_DIR/include/linux/
-          
-          # 3. تعديل شفرة الملف المنسوخ ليتوافق مع نواة Linux الحقيقية بدلاً من البيئة الوهمية
-          sed -i 's/ktypes\.h/linux\/types\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
-          sed -i 's/compiler\.h/linux\/compiler\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
-          
-          # 4. استدعاء أمر البناء
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR
-          
+          # استدعاء البناء المباشر
+          make
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
