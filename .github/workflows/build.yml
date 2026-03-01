@@ -68,10 +68,14 @@ jobs:
         run: |
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
           
-          # حقن واجهة KernelPatch كترويسات نواة أصلية لتجاوز عزل OPLUS
-          cp -r $KP_DIR/kernel/patch/include/* $KERNEL_DIR/include/linux/
+          # استخراج ترويسات KernelPatch الأساسية لمجلد العمل المحلي
+          cp -r $KP_DIR/kernel/patch/include/* ${{ github.workspace }}/
           
-          # استدعاء البناء
+          # بناء ملفات جسرية لربط متطلبات KPM بالنواة الحقيقية دون إتلافها
+          echo "#include <linux/types.h>" > ${{ github.workspace }}/ktypes.h
+          echo "#include <linux/compiler.h>" > ${{ github.workspace }}/compiler.h
+          
+          # استدعاء البناء (يترك تمرير المسار لملف Makefile)
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR
           
       - name: Upload Artifact
