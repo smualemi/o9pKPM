@@ -1,5 +1,5 @@
 ifndef TARGET_COMPILE
-    $(error TARGET_COMPILE not set. Example: export TARGET_COMPILE=aarch64-none-elf-)
+    $(error TARGET_COMPILE not set)
 endif
 
 ifndef KP_DIR
