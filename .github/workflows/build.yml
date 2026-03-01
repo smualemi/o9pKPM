@@ -67,7 +67,13 @@ jobs:
           KP_DIR: ${{ github.workspace }}/KernelPatch
         run: |
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR KP_DIR=$KP_DIR
+          
+          # حقن ترويسات KernelPatch داخل شجرة النواة لتفادي مسح المسارات
+          cp -r $KP_DIR/kernel/patch/include/* $KERNEL_DIR/include/
+          cp -r $KP_DIR/kernel/linux/include/* $KERNEL_DIR/include/
+          
+          # استدعاء البناء
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
