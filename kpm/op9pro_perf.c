@@ -4,6 +4,10 @@
  *
  * OP9Pro Performance KPM - OnePlus 9 Pro (SM8350) OOS14
  * 3 profiles: performance / balanced / battery
+ *
+ * Uses ONLY KernelPatch exported symbols.
+ * File I/O via kallsyms_lookup_name (exported) to resolve
+ * filp_open/kernel_write/filp_close at init time.
  */
 
 #include <compiler.h>
@@ -25,23 +29,33 @@ KPM_DESCRIPTION("OnePlus 9 Pro Performance Optimizer");
 #define PROF_BAT   2
 static int cur_profile = PROF_BAL;
 
-/* Kernel file ops - kfunc declarations
- * kfunc_def(func) expands to (*kf_func)
- * So: void *kfunc_def(filp_open)(...) => void *(*kf_filp_open)(...)
+/*
+ * File I/O - use LOCAL function pointers (not kfunc_def which creates
+ * global symbols that KP's module loader would try to resolve).
+ * We resolve them manually via kallsyms_lookup_name which IS exported.
  */
-static void *kfunc_def(filp_open)(const char *, int, unsigned short);
-static long kfunc_def(kernel_write)(void *, const void *, unsigned long, long long *);
-static int kfunc_def(filp_close)(void *, void *);
+typedef void *(*t_filp_open)(const char *, int, unsigned short);
+typedef long (*t_kernel_write)(void *, const void *, unsigned long, long long *);
+typedef int (*t_filp_close)(void *, void *);
+
+static t_filp_open my_filp_open = 0;
+static t_kernel_write my_kernel_write = 0;
+static t_filp_close my_filp_close = 0;
 static int funcs_ok = 0;
 
 static int resolve_funcs(void)
 {
     if (funcs_ok) return 0;
-    kfunc_lookup_name(filp_open);
-    kfunc_lookup_name(kernel_write);
-    kfunc_lookup_name(filp_close);
-    if (!kfunc(filp_open) || !kfunc(kernel_write) || !kfunc(filp_close)) {
-        pr_err("op9pro-perf: resolve failed\n");
+
+    my_filp_open = (t_filp_open)kallsyms_lookup_name("filp_open");
+    my_kernel_write = (t_kernel_write)kallsyms_lookup_name("kernel_write");
+    my_filp_close = (t_filp_close)kallsyms_lookup_name("filp_close");
+
+    if (!my_filp_open || !my_kernel_write || !my_filp_close) {
+        pr_err("op9pro-perf: resolve failed fo=%lx kw=%lx fc=%lx\n",
+               (unsigned long)my_filp_open,
+               (unsigned long)my_kernel_write,
+               (unsigned long)my_filp_close);
         return -1;
     }
     funcs_ok = 1;
@@ -56,10 +70,10 @@ static void sysfs_write(const char *path, const char *val)
     const char *p = val;
     while (*p++) len++;
 
-    f = kfunc(filp_open)(path, 0x0001 | 0x0200, 0);
+    f = my_filp_open(path, 0x0001 | 0x0200, 0); /* O_WRONLY | O_TRUNC */
     if (!f || (long)f < 0) return;
-    kfunc(kernel_write)(f, val, len, &pos);
-    kfunc(filp_close)(f, 0);
+    my_kernel_write(f, val, len, &pos);
+    my_filp_close(f, 0);
 }
 
 /* === CPU === */
@@ -261,7 +275,7 @@ static void apply(int p)
 /* === KPM callbacks === */
 static long kpm_init(const char *args, const char *event, void *__user reserved)
 {
-    pr_info("op9pro-perf v1.0.0 init, kpver: %x\n", kpver);
+    pr_info("op9pro-perf v1.0.0 init kpver=%x\n", kpver);
 
     if (resolve_funcs() != 0) return -1;
 
@@ -269,16 +283,16 @@ static long kpm_init(const char *args, const char *event, void *__user reserved)
     if (args && args[0] == 'p') p = PROF_PERF;
     else if (args && args[0] == 'b' && args[1] == 'a' && args[2] == 't') p = PROF_BAT;
 
-    pr_info("op9pro-perf: profile=%d\n", p);
+    pr_info("op9pro-perf: applying profile %d\n", p);
     apply(p);
-    pr_info("op9pro-perf: done\n");
+    pr_info("op9pro-perf: initialized\n");
     return 0;
 }
 
 static long kpm_ctl0(const char *args, char *__user out_msg, int outlen)
 {
-    pr_info("op9pro-perf: ctl args=%s\n", args ? args : "null");
     if (!args) return 0;
+    pr_info("op9pro-perf: ctl0 args=%s\n", args);
 
     if (args[0] == 'p') apply(PROF_PERF);
     else if (args[0] == 'b' && args[1] == 'a' && args[2] == 't') apply(PROF_BAT);
@@ -297,9 +311,8 @@ static long kpm_ctl1(void *a1, void *a2, void *a3) { return 0; }
 
 static long kpm_exit(void *__user reserved)
 {
-    pr_info("op9pro-perf: exit, restoring balanced\n");
+    pr_info("op9pro-perf: exit\n");
     if (funcs_ok) apply(PROF_BAL);
-    pr_info("op9pro-perf: unloaded\n");
     return 0;
 }
 
