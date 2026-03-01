@@ -1,6 +1,8 @@
 KPM_NAME := oplus_optimize
 
 ifneq ($(KERNELRELEASE),)
+    # إجبار المترجم على قراءة الترويسات من المجلد المحلي للوحدة
+    ccflags-y += -I$(src)
     obj-m += main.o
 else
     OUT_DIR := $(PWD)/out
