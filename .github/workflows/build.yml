@@ -24,11 +24,22 @@ jobs:
 
       - name: Build KPM
         env:
+          KERNEL_DIR: ${{ github.workspace }}/kernel_source
           NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
           KP_DIR: ${{ github.workspace }}/KernelPatch
         run: |
-          # استدعاء البناء المباشر
-          make
+          export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+          
+          # استخراج ملف kpmodule.h ديناميكياً لتفادي تغييرات المسارات
+          KP_HEADER=$(find $KP_DIR -name "kpmodule.h" | head -n 1)
+          cp "$KP_HEADER" $KERNEL_DIR/include/linux/
+          
+          # ربط التبعيات بتعريفات النواة الحقيقية
+          sed -i 's/ktypes\.h/linux\/types\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
+          sed -i 's/compiler\.h/linux\/compiler\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
+          
+          # البناء مع تعطيل LTO و CFI عبر سطر الأوامر
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 CONFIG_LTO_CLANG=n CONFIG_CFI_CLANG=n CONFIG_LTO_NONE=y KERNEL_DIR=$KERNEL_DIR
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
