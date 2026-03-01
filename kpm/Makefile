@@ -1,8 +1,3 @@
-# ============================================================
-#  OP9Pro Performance KPM - Makefile
-#  For building with KernelPatch toolchain
-# ============================================================
-
 ifndef TARGET_COMPILE
     $(error TARGET_COMPILE not set. Example: export TARGET_COMPILE=aarch64-none-elf-)
 endif
