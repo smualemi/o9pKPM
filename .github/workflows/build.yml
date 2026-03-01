@@ -22,6 +22,35 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/bmax121/KernelPatch.git
 
+      - name: Clone OnePlus Kernel Source
+        run: |
+          git clone --depth 1 -b oneplus/sm8350_u_14.0.0_oneplus9 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8350.git kernel_source
+
+      - name: Prepare Kernel (modules_prepare)
+        env:
+          KERNEL_DIR: ${{ github.workspace }}/kernel_source
+          NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+          cd $KERNEL_DIR
+          git submodule update --init --recursive || true
+          
+          # مسح وإنشاء ملفات Kconfig الوهمية لتجاوز أخطاء البناء
+          find . -name "Kconfig*" -type f -exec sed -n 's/^[[:space:]]*source[[:space:]]*"\([^"]*\)".*/\1/p' {} \; | sort -u | while read -r file; do
+            if [[ "$file" == *"\$"* ]]; then continue; fi
+            if [ ! -f "$file" ]; then
+              dir=$(dirname "$file")
+              if [ ! -d "$dir" ]; then rm -f "$dir" 2>/dev/null || true; fi
+              mkdir -p "$dir" 2>/dev/null || continue
+              touch "$file" 2>/dev/null || true
+            fi
+          done
+          
+          # تهيئة النواة
+          cp ${{ github.workspace }}/ossi_oos14_defconfig.txt arch/arm64/configs/custom_defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 custom_defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 modules_prepare
+
       - name: Build KPM
         env:
           KERNEL_DIR: ${{ github.workspace }}/kernel_source
@@ -30,7 +59,13 @@ jobs:
         run: |
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
           
-          # استدعاء أمر البناء (تتم معالجة المسارات عبر Makefile)
+          # استخراج وتعديل ترويسة KPM إجبارياً داخل شجرة النواة
+          KP_HEADER=$(find $KP_DIR -name "kpmodule.h" | head -n 1)
+          cp "$KP_HEADER" $KERNEL_DIR/include/linux/
+          sed -i 's/ktypes\.h/linux\/types\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
+          sed -i 's/compiler\.h/linux\/compiler\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
+          
+          # استدعاء البناء النهائي
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR KP_DIR=$KP_DIR
 
       - name: Upload Artifact
