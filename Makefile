@@ -6,8 +6,8 @@ else
     OUT_DIR := $(PWD)/out
 
 all:
-	# تمرير المسارات وأوامر الإيقاف مباشرة عبر KCFLAGS لتجاوز عزل OPLUS
-	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 CONFIG_LTO_CLANG=n CONFIG_CFI_CLANG=n KCFLAGS="-I$(KP_DIR)/kernel/patch/include -I$(KP_DIR)/kernel/linux/include -fno-lto -fno-cfi" modules
+	# تمرير أوامر إيقاف LTO و CFI صراحةً لتجاوز إعدادات النواة الافتراضية
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 CONFIG_LTO_CLANG=n CONFIG_CFI_CLANG=n CONFIG_LTO_NONE=y modules
 	mkdir -p $(OUT_DIR)
 	cp kpm.json $(OUT_DIR)/
 	cp main.ko $(OUT_DIR)/module.ko
