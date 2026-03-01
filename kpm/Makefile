@@ -1,0 +1,34 @@
+# ============================================================
+#  OP9Pro Performance KPM - Makefile
+#  For building with KernelPatch toolchain
+# ============================================================
+
+ifndef TARGET_COMPILE
+    $(error TARGET_COMPILE not set. Example: export TARGET_COMPILE=aarch64-none-elf-)
+endif
+
+ifndef KP_DIR
+    KP_DIR = ../..
+endif
+
+CC = $(TARGET_COMPILE)gcc
+LD = $(TARGET_COMPILE)ld
+
+INCLUDE_DIRS := . include patch/include linux/include linux/arch/arm64/include linux/tools/arch/arm64/include
+
+INCLUDE_FLAGS := $(foreach dir,$(INCLUDE_DIRS),-I$(KP_DIR)/kernel/$(dir))
+
+objs := op9pro_perf.o
+
+all: op9pro_perf.kpm
+
+op9pro_perf.kpm: ${objs}
+	${CC} -r -o $@ $^
+
+%.o: %.c
+	${CC} $(CFLAGS) $(INCLUDE_FLAGS) -Top9pro_perf.lds -c -O2 -o $@ $<
+
+.PHONY: clean
+clean:
+	rm -rf *.kpm
+	find . -name "*.o" | xargs rm -f
