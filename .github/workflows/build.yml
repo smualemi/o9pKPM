@@ -68,14 +68,25 @@ jobs:
         run: |
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
           
-          # 1. نسخ ملف kpmodule.h فقط إلى المجلد المحمي داخل النواة الأصلية
-          cp $KP_DIR/kernel/patch/include/kpmodule.h $KERNEL_DIR/include/linux/
+          # 1. البحث الديناميكي عن ملف kpmodule.h داخل مستودع KernelPatch
+          KP_HEADER=$(find $KP_DIR -name "kpmodule.h" | head -n 1)
           
-          # 2. تعديل شفرة الملف المنسوخ ليتوافق مع نواة Linux الحقيقية بدلاً من البيئة الوهمية
+          # التحقق من العثور على الملف
+          if [ -z "$KP_HEADER" ]; then
+            echo "Error: kpmodule.h not found in KernelPatch repository!"
+            exit 1
+          fi
+          
+          echo "Found kpmodule.h at: $KP_HEADER"
+          
+          # 2. نسخ الملف إلى المجلد المحمي داخل النواة الأصلية
+          cp "$KP_HEADER" $KERNEL_DIR/include/linux/
+          
+          # 3. تعديل شفرة الملف المنسوخ ليتوافق مع نواة Linux الحقيقية بدلاً من البيئة الوهمية
           sed -i 's/ktypes\.h/linux\/types\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
           sed -i 's/compiler\.h/linux\/compiler\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
           
-          # 3. استدعاء أمر البناء
+          # 4. استدعاء أمر البناء
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR
           
       - name: Upload Artifact
