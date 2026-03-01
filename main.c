@@ -1,5 +1,5 @@
+#include "kpmodule.h"
 #include <linux/printk.h>
-#include <kpmodule.h> // سيتم توفير هذا المسار عبر Makefile
 
 KPM_NAME("oplus_optimize");
 KPM_VERSION("1.0.0");
