@@ -68,14 +68,14 @@ jobs:
         run: |
           export PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
           
-          # استخراج ترويسات KernelPatch الأساسية لمجلد العمل المحلي
-          cp -r $KP_DIR/kernel/patch/include/* ${{ github.workspace }}/
+          # 1. نسخ ملف kpmodule.h فقط إلى المجلد المحمي داخل النواة الأصلية
+          cp $KP_DIR/kernel/patch/include/kpmodule.h $KERNEL_DIR/include/linux/
           
-          # بناء ملفات جسرية لربط متطلبات KPM بالنواة الحقيقية دون إتلافها
-          echo "#include <linux/types.h>" > ${{ github.workspace }}/ktypes.h
-          echo "#include <linux/compiler.h>" > ${{ github.workspace }}/compiler.h
+          # 2. تعديل شفرة الملف المنسوخ ليتوافق مع نواة Linux الحقيقية بدلاً من البيئة الوهمية
+          sed -i 's/ktypes\.h/linux\/types\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
+          sed -i 's/compiler\.h/linux\/compiler\.h/g' $KERNEL_DIR/include/linux/kpmodule.h
           
-          # استدعاء البناء (يترك تمرير المسار لملف Makefile)
+          # 3. استدعاء أمر البناء
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KERNEL_DIR=$KERNEL_DIR
           
       - name: Upload Artifact
