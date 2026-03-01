@@ -6,8 +6,7 @@ else
     OUT_DIR := $(PWD)/out
 
 all:
-	# استخدام KCFLAGS لحقن المسار المحلي إجبارياً في نهاية أمر الترجمة
-	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 KCFLAGS="-I$(PWD)" modules
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 modules
 	mkdir -p $(OUT_DIR)
 	cp kpm.json $(OUT_DIR)/
 	cp main.ko $(OUT_DIR)/module.ko
