@@ -6,6 +6,8 @@ ifndef KP_DIR
     KP_DIR = ../..
 endif
 
+TARGET = op9pro_perf
+
 CC = $(TARGET_COMPILE)gcc
 LD = $(TARGET_COMPILE)ld
 
@@ -13,15 +15,15 @@ INCLUDE_DIRS := . include patch/include linux/include linux/arch/arm64/include l
 
 INCLUDE_FLAGS := $(foreach dir,$(INCLUDE_DIRS),-I$(KP_DIR)/kernel/$(dir))
 
-objs := op9pro_perf.o
+objs := $(TARGET).o
 
-all: op9pro_perf.kpm
+all: $(TARGET).kpm
 
-op9pro_perf.kpm: ${objs}
+$(TARGET).kpm: ${objs}
 	${CC} -r -o $@ $^
 
 %.o: %.c
-	${CC} $(CFLAGS) $(INCLUDE_FLAGS) -Top9pro_perf.lds -c -O2 -o $@ $<
+	${CC} $(CFLAGS) $(INCLUDE_FLAGS) -T$(TARGET).lds -c -O2 -o $@ $<
 
 .PHONY: clean
 clean:
