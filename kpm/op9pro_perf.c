@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * OP9Pro Performance KPM v2.0.0
+ * OP9Pro Performance KPM v2.1.0
  * All tuning built into the KPM - no shell script needed.
  *
- * Uses kallsyms_lookup_name (same pattern as demo-syscallhook)
- * to resolve filp_open/kernel_write/filp_close at init time.
+ * Uses ksyms.h (NOT syscall.h) to get kallsyms_lookup_name
+ * without pulling in unresolvable extern symbols.
  */
 
 #include <compiler.h>
@@ -12,11 +12,11 @@
 #include <linux/printk.h>
 #include <common.h>
 #include <kputils.h>
-#include <syscall.h>
+#include <ksyms.h>
 #include <linux/string.h>
 
 KPM_NAME("op9pro-perf");
-KPM_VERSION("2.0.0");
+KPM_VERSION("2.1.0");
 KPM_LICENSE("GPL v2");
 KPM_AUTHOR("smualemi");
 KPM_DESCRIPTION("OnePlus 9 Pro Performance Optimizer");
@@ -245,7 +245,7 @@ static void apply(int p)
 /* === KPM Callbacks === */
 static long kpm_init(const char *args, const char *event, void *__user reserved)
 {
-    pr_info("op9pro-perf v2.0.0 init, kpver: 0x%x\n", kpver);
+    pr_info("op9pro-perf v2.1.0 init, kpver: 0x%x\n", kpver);
 
     k_filp_open = (typeof(k_filp_open))kallsyms_lookup_name("filp_open");
     k_kernel_write = (typeof(k_kernel_write))kallsyms_lookup_name("kernel_write");
