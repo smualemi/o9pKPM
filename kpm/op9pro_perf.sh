@@ -8,7 +8,7 @@ if [ -z "$PROFILE" ]; then
     exit 1
 fi
 
-W() { echo "$2" > "$1" 2>/dev/null; }
+W() { (echo "$2" > "$1") 2>/dev/null; }
 
 echo "[op9pro] Applying: $PROFILE"
 
