@@ -1,10 +1,8 @@
-name: Build OP9Pro KPM
+name: Build KPM
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -13,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download ARM toolchain
+      - name: Download cross-compiler
         run: |
           wget -q https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-aarch64-none-elf.tar.xz
           tar xf arm-gnu-toolchain-13.2.rel1-x86_64-aarch64-none-elf.tar.xz
@@ -25,14 +23,28 @@ jobs:
       - name: Build KPM
         run: |
           export TARGET_COMPILE=aarch64-none-elf-
-          export KP_DIR=$PWD/KernelPatch
           cd kpm
-          make
+          make KP_DIR=../KernelPatch
 
-      - name: Upload KPM artifact
+      - name: Verify ELF sections
+        run: |
+          echo "=== ELF sections ==="
+          aarch64-none-elf-readelf -S kpm/op9pro_perf.kpm
+          echo ""
+          echo "=== Undefined symbols ==="
+          aarch64-none-elf-nm -u kpm/op9pro_perf.kpm || true
+          echo ""
+          echo "=== All symbols ==="
+          aarch64-none-elf-nm kpm/op9pro_perf.kpm || true
+
+      - name: Upload KPM
         uses: actions/upload-artifact@v4
         with:
-          name: op9pro_perf-kpm
-          path: |
-            kpm/op9pro_perf.kpm
-            kpm/op9pro_perf.sh
+          name: op9pro-perf-kpm
+          path: kpm/op9pro_perf.kpm
+
+      - name: Upload Shell Script
+        uses: actions/upload-artifact@v4
+        with:
+          name: op9pro-perf-script
+          path: kpm/op9pro_perf.sh

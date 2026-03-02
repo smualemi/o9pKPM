@@ -1,49 +1,63 @@
 # OP9Pro Performance KPM
 
-KernelPatch Module for OnePlus 9 Pro (SM8350/Lahaina) - OxygenOS 14
+KernelPatch Module for OnePlus 9 Pro (SM8350/Lahaina) performance tuning.
 
 ## Architecture
 
-This module uses a **two-part** architecture:
-1. **KPM Module** (`op9pro_perf.kpm`) - Loaded by APatch/KernelPatch, registers in the kernel
-2. **Shell Script** (`op9pro_perf.sh`) - Applies actual sysfs/procfs tuning with root permissions
+**KPM + Shell Script** - The KPM loads into the kernel as a module marker. 
+The shell script applies actual sysfs/procfs tuning.
 
-## Profiles
-
-| Profile | CPU | Memory | I/O | GPU | Battery |
-|---------|-----|--------|-----|-----|----------|
-| `performance` | Max freq, fast ramp | Low swappiness, large cache | mq-deadline, 512KB readahead | Max clock, no throttle | Higher drain |
-| `balanced` | Default schedutil | Default tunables | BFQ, 256KB readahead | Auto governor | Normal |
-| `battery` | Low freq cap, slow ramp | High swappiness, aggressive writeback | BFQ, 128KB readahead | Low clock, throttled | Maximum savings |
+> **Why two parts?** KernelPatch's module loader only resolves its own exported symbols.
+> `kallsyms_lookup_name` (needed for file I/O in kernel space) is NOT exported,
+> so kernel-level tuning inside the KPM is not possible without a fully-linked build.
 
 ## Installation
 
-1. Download `op9pro_perf-kpm` from [Releases/Actions](../../actions)
-2. Unzip to get `op9pro_perf.kpm`
-3. In APatch → KPM tab → Load Module → select `op9pro_perf.kpm`
-4. Copy `op9pro_perf.sh` to `/data/adb/kpm/` on your device
-5. Run profile: `sh /data/adb/kpm/op9pro_perf.sh performance`
+1. Download both files from [Releases](../../actions) (Actions → latest build → Artifacts)
+2. Load `op9pro_perf.kpm` in APatch → KPM Manager
+3. Copy `op9pro_perf.sh` to `/data/adb/kpm/` on your device
+4. Fix line endings and permissions:
+```sh
+sed -i 's/\r$//' /data/adb/kpm/op9pro_perf.sh
+chmod +x /data/adb/kpm/op9pro_perf.sh
+```
+
+## Usage
+
+Switch profiles:
+```sh
+sh /data/adb/kpm/op9pro_perf.sh performance
+sh /data/adb/kpm/op9pro_perf.sh balanced
+sh /data/adb/kpm/op9pro_perf.sh battery
+```
 
 ## Auto-apply on boot
 
 Create `/data/adb/post-fs-data.d/op9pro_perf.sh`:
 ```sh
 #!/system/bin/sh
-sh /data/adb/kpm/op9pro_perf.sh performance
-```
-Make executable: `chmod +x /data/adb/post-fs-data.d/op9pro_perf.sh`
-
-## Quick switch profiles
-
-```sh
-# Performance mode
-sh /data/adb/kpm/op9pro_perf.sh performance
-
-# Balanced mode  
 sh /data/adb/kpm/op9pro_perf.sh balanced
-
-# Battery mode
-sh /data/adb/kpm/op9pro_perf.sh battery
+```
+```sh
+chmod +x /data/adb/post-fs-data.d/op9pro_perf.sh
 ```
 
-⚠️ **Warning**: Kernel modifications can cause instability. Use at your own risk.
+## Profiles
+
+| Setting | Performance | Balanced | Battery |
+|---------|------------|----------|--------|
+| CPU Governor | schedutil (aggressive) | schedutil (default) | schedutil (conservative) |
+| GPU | Max clock, no throttle | Auto | Low power |
+| I/O Scheduler | mq-deadline | bfq | bfq |
+| Memory | Low swap, large cache | Default | High swap |
+| Network | Large buffers | Medium | Small |
+
+## Technical Details
+
+- The `W()` function in the shell script uses `2>/dev/null` to silently skip
+  files that don't exist or require special permissions
+- All errors are non-fatal — the script applies what it can
+
+## ⚠️ Warning
+
+This module modifies kernel parameters. Use at your own risk.
